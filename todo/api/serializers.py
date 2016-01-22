@@ -13,7 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
 class TodoAttachmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = TodoAttachment
-        fields = ('id', 'data')
+        fields = ('data', )
 
 class TodoItemSerializer(serializers.ModelSerializer):
     attachments = TodoAttachmentSerializer(many=True)

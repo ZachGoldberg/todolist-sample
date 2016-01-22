@@ -97,10 +97,34 @@ class AccountTests(APITestCase):
         self.assertEqual(ti.status, newdata['status'])
 
     def test_edit_attachment(self):
-        pass
+        data = self.sample_todoitem()
+        user1 = self.create_user()
+        self.set_token(user1)
+        response = self.client.post(self.TODO_URL, data)
+        ti_id = response.data['id']
+
+        data["attachments"][0]["data"] = "new attachment data"
+        response = self.client.put("%s%s/" % (self.TODO_URL, ti_id),
+                                   data)
+        tia_data = TodoItem.objects.get(id=ti_id).attachments.values_list("data", flat=True)
+        self.assertTrue("new attachment data" in tia_data)
+
 
     def test_edit_attachment_wrong_user(self):
-        pass
+        data = self.sample_todoitem()
+        user1 = self.create_user()
+        self.set_token(user1)
+        response = self.client.post(self.TODO_URL, data)
+        ti_id = response.data['id']
+
+        user2 = self.create_user("user2")
+        self.set_token(user2)
+        response = self.client.put("%s%s/" % (self.TODO_URL, ti_id),
+                                   data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        tia_data = TodoItem.objects.get(id=ti_id).attachments.values_list("data", flat=True)
+        self.assertFalse("new attachment data" in tia_data)
+
 
     def test_edit_wrong_todoitem(self):
         # Create a new todo for user 1
