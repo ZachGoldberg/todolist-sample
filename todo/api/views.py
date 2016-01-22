@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from api.serializers import (UserSerializer, TodoItemSerializer,
-                                  TodoAttachmentSerializer)
+                             TodoAttachmentSerializer)
 
 
 
@@ -60,7 +60,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         if request.user.id != uid:
             raise exceptions.PermissionDenied
-
+        TodoAttachment.objects.filter(todoitem__owner_id=uid).delete()
         TodoItem.objects.filter(owner_id=uid).delete()
         self.kwargs['pk'] = uid
         return super(UserViewSet, self).destroy(request, uid)
@@ -72,6 +72,7 @@ class TodoItemViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, )
     queryset = TodoItem.objects.all()
     serializer_class = TodoItemSerializer
+
     def create(self, request):
         request.data['owner'] = request.user.id
         return super(TodoItemViewSet, self).create(request)
@@ -84,9 +85,24 @@ class TodoItemViewSet(viewsets.ModelViewSet):
         request.data['owner'] = request.user.id
         return super(TodoItemViewSet, self).update(request, pk=pk)
 
+    def destroy(self, request, pk=None):
+        ti = TodoItem.objects.get(id=pk)
+        if ti.owner != request.user:
+            raise exceptions.PermissionDenied
+
+        ti.attachments.all().delete()
+        return super(TodoItemViewSet, self).destroy(request, pk)
+
 class TodoAttachmentViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows TodoAttachments to be viewed or edited.
     """
     queryset = TodoAttachment.objects.all()
     serializer_class = TodoAttachmentSerializer
+
+    def create(self, validated_data):
+        tracks_data = validated_data.pop('tracks')
+        album = Album.objects.create(**validated_data)
+        for track_data in tracks_data:
+            Track.objects.create(album=album, **track_data)
+            return album

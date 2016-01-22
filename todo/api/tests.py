@@ -55,6 +55,7 @@ class AccountTests(APITestCase):
             "description": "description-%s" % randstr(20),
             "due_date": "2016-02-01T00:00",
             "status": True,
+            "attachments": [{"data": "a1"}, {"data": "a2"}]
             }
 
     def set_token(self, user):
@@ -69,13 +70,14 @@ class AccountTests(APITestCase):
         user = self.create_user()
         self.set_token(user)
         response = self.client.post(self.TODO_URL, data)
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(TodoItem.objects.count(), 1)
         ti = TodoItem.objects.get()
         self.assertEqual(ti.title, data['title'])
         self.assertEqual(ti.description, data['description'])
         self.assertEqual(ti.status, data['status'])
-
+        self.assertEqual(ti.attachments.count(), len(data["attachments"]))
 
     def test_edit_todoitem(self):
         # Create a new todo
@@ -93,6 +95,12 @@ class AccountTests(APITestCase):
         self.assertEqual(ti.title, newdata['title'])
         self.assertEqual(ti.description, newdata['description'])
         self.assertEqual(ti.status, newdata['status'])
+
+    def test_edit_attachment(self):
+        pass
+
+    def test_edit_attachment_wrong_user(self):
+        pass
 
     def test_edit_wrong_todoitem(self):
         # Create a new todo for user 1
@@ -147,6 +155,7 @@ class AccountTests(APITestCase):
         response = self.client.post(self.TODO_URL, data2)
         response = self.client.delete("%s%s/" % (self.USER_URL, user1['username']))
 
-        #self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(TodoItem.objects.count(), 0)
+        self.assertEqual(TodoAttachment.objects.count(), 0)
         self.assertEqual(User.objects.count(), 0)

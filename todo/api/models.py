@@ -15,9 +15,13 @@ class TodoItem(models.Model):
     status = models.BooleanField(default=False)
     owner = models.ForeignKey(User)
 
+
 class TodoAttachment(models.Model):
     class Meta:
         app_label = 'api'
 
     data = models.TextField()
-    todoitem = models.ForeignKey('TodoItem')
+    todoitem = models.ForeignKey(TodoItem, related_name='attachments')
+
+    def __unicode__(self):
+        return self.data
