@@ -7,7 +7,7 @@ from api.models import TodoItem, TodoAttachment
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('username')
+        fields = ('username', )
 
 class TodoItemSerializer(serializers.ModelSerializer):
     class Meta:
