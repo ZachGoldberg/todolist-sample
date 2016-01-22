@@ -77,6 +77,14 @@ class TodoItemViewSet(viewsets.ModelViewSet):
         request.data['owner'] = request.user.id
         return super(TodoItemViewSet, self).create(request)
 
+    def list(self, request):
+        self.queryset = TodoItem.objects.filter(owner=request.user)
+        return super(TodoItemViewSet, self).list(request)
+
+    def retrieve(self, request, pk=None):
+        self.queryset = TodoItem.objects.filter(owner=request.user)
+        return super(TodoItemViewSet, self).retreive(request)
+
     def update(self, request, pk=None):
         ti = TodoItem.objects.get(id=pk)
         if ti.owner != request.user:
@@ -92,17 +100,3 @@ class TodoItemViewSet(viewsets.ModelViewSet):
 
         ti.attachments.all().delete()
         return super(TodoItemViewSet, self).destroy(request, pk)
-
-class TodoAttachmentViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows TodoAttachments to be viewed or edited.
-    """
-    queryset = TodoAttachment.objects.all()
-    serializer_class = TodoAttachmentSerializer
-
-    def create(self, validated_data):
-        tracks_data = validated_data.pop('tracks')
-        album = Album.objects.create(**validated_data)
-        for track_data in tracks_data:
-            Track.objects.create(album=album, **track_data)
-            return album

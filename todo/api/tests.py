@@ -170,6 +170,23 @@ class AccountTests(APITestCase):
         db_titles = set(TodoItem.objects.values_list('title', flat=True))
         self.assertTrue(db_titles == todos)
 
+        user2 = self.create_user("user2")
+        self.set_token(user2)
+        data3 = self.sample_todoitem()
+        data4 = self.sample_todoitem()
+
+        response = self.client.post(self.TODO_URL, data3)
+        response = self.client.post(self.TODO_URL, data4)
+
+        self.assertEqual(TodoItem.objects.count(), 4)
+        response = self.client.get(self.TODO_URL)
+        self.assertEqual(len(response.data), 2)
+        todos = set([u['title'] for u in response.data])
+        db_titles = set([data3["title"], data4["title"]])
+        self.assertTrue(db_titles == todos)
+
+
+
     def test_remove_users_and_todo(self):
         data1 = self.sample_todoitem()
         data2 = self.sample_todoitem()
