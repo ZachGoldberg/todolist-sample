@@ -12,10 +12,10 @@ class UserSerializer(serializers.ModelSerializer):
 class TodoItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = TodoItem
-        fields = ('title', 'description', 'due_date', 'status', 'owner')
+        fields = ('id', 'title', 'description', 'due_date', 'status', 'owner')
 
 
 class TodoAttachmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = TodoAttachment
-        fields = ('data', 'todoitem_id')
+        fields = ('id', 'data', 'todoitem_id')

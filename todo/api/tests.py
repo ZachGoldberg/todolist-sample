@@ -1,6 +1,7 @@
 import random
 import string
 
+from api.models import TodoItem, TodoAttachment
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from rest_framework import status
@@ -56,7 +57,7 @@ class AccountTests(APITestCase):
             "status": True,
             }
 
-    def get_token(self, user):
+    def set_token(self, user):
         response = self.client.post(self.AUTH_URL, user)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         token = response.data['token']
@@ -66,20 +67,86 @@ class AccountTests(APITestCase):
     def test_add_todoitem(self):
         data = self.sample_todoitem()
         user = self.create_user()
-        token = self.get_token(user)
+        self.set_token(user)
         response = self.client.post(self.TODO_URL, data)
-        print response
-        import pdb; pdb.set_trace()
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(TodoItem.objects.count(), 1)
+        ti = TodoItem.objects.get()
+        self.assertEqual(ti.title, data['title'])
+        self.assertEqual(ti.description, data['description'])
+        self.assertEqual(ti.status, data['status'])
 
 
     def test_edit_todoitem(self):
-        pass
+        # Create a new todo
+        data = self.sample_todoitem()
+        user = self.create_user()
+        self.set_token(user)
+        response = self.client.post(self.TODO_URL, data)
+
+        # Change all it's fields
+        ti_id = response.data['id']
+        newdata = self.sample_todoitem()
+        response = self.client.put("%s%s/" % (self.TODO_URL, ti_id),
+                                   data=newdata)
+        ti = TodoItem.objects.get(id=ti_id)
+        self.assertEqual(ti.title, newdata['title'])
+        self.assertEqual(ti.description, newdata['description'])
+        self.assertEqual(ti.status, newdata['status'])
+
+    def test_edit_wrong_todoitem(self):
+        # Create a new todo for user 1
+        data = self.sample_todoitem()
+        user1 = self.create_user()
+        self.set_token(user1)
+        response = self.client.post(self.TODO_URL, data)
+
+        # Create a user 2 and have them try and edit user 1's item
+        user2 = self.create_user("user2")
+        self.set_token(user2)
+        newdata = self.sample_todoitem()
+        response = self.client.put("%s%s/" % (self.TODO_URL,
+                                              response.data['id']),
+                                   data=newdata)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        ti = TodoItem.objects.get()
+        self.assertEqual(ti.title, data['title'])
+        self.assertEqual(ti.description, data['description'])
+        self.assertEqual(ti.status, data['status'])
 
     def test_delete_todoitem(self):
-        pass
-
-    def test_remove_users_and_todo(self):
-        pass
+        data = self.sample_todoitem()
+        user1 = self.create_user()
+        self.set_token(user1)
+        response = self.client.post(self.TODO_URL, data)
+        ti = TodoItem.objects.get()
+        response = self.client.delete("%s%s/" % (self.TODO_URL, ti.id))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(TodoItem.objects.count(), 0)
 
     def test_list_todoitem(self):
-        pass
+        data1 = self.sample_todoitem()
+        data2 = self.sample_todoitem()
+        user1 = self.create_user()
+        self.set_token(user1)
+        response = self.client.post(self.TODO_URL, data1)
+        response = self.client.post(self.TODO_URL, data2)
+
+        self.assertEqual(TodoItem.objects.count(), 2)
+        response = self.client.get(self.TODO_URL)
+        todos = set([u['title'] for u in response.data])
+        db_titles = set(TodoItem.objects.values_list('title', flat=True))
+        self.assertTrue(db_titles == todos)
+
+    def test_remove_users_and_todo(self):
+        data1 = self.sample_todoitem()
+        data2 = self.sample_todoitem()
+        user1 = self.create_user()
+        self.set_token(user1)
+        response = self.client.post(self.TODO_URL, data1)
+        response = self.client.post(self.TODO_URL, data2)
+        response = self.client.delete("%s%s/" % (self.USER_URL, user1['username']))
+
+        #self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(TodoItem.objects.count(), 0)
+        self.assertEqual(User.objects.count(), 0)
